@@ -7,6 +7,8 @@ import (
 	"gonum.org/v1/gonum/mat"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol/bc"
+	"time"
+	"fmt"
 )
 
 const (
@@ -15,6 +17,8 @@ const (
 )
 
 func mulMatrix(headerhash []byte, cache []uint32) []uint8 {
+
+	sT := time.Now()
 	ui32data := make([]uint32, matNum*matSize*matSize/4)
 	for i := 0; i < 128; i++ {
 		start := i * 1024 * 32
@@ -23,6 +27,8 @@ func mulMatrix(headerhash []byte, cache []uint32) []uint8 {
 			copy(ui32data[start+512*32+j*32:start+512*32+j*32+32], cache[start+j*64+32:start+j*64+64])
 		}
 	}
+	eT := time.Now()
+	fmt.Println("Time for preparing ui32data:", eT.Sub(sT))
 
 	// Convert our destination slice to a int8 buffer
 	header := *(*reflect.SliceHeader)(unsafe.Pointer(&ui32data))
@@ -30,19 +36,25 @@ func mulMatrix(headerhash []byte, cache []uint32) []uint8 {
 	header.Cap *= 4
 	i8data := *(*[]int8)(unsafe.Pointer(&header))
 
+	sT = time.Now()
 	f64data := make([]float64, matNum*matSize*matSize)
 	for i := 0; i < matNum*matSize*matSize; i++ {
 		f64data[i] = float64(i8data[i])
 	}
+	eT = time.Now()
+	fmt.Println("Time for preparing f64data:", eT.Sub(sT))
 
 	tmp := mat.NewDense(matSize, matSize, make([]float64, matSize*matSize))
 
-
+	sT = time.Now()
 	dataIdentity := make([]float64, matSize*matSize)
 	for i := 0; i < 256; i++ {
 		dataIdentity[i*257] = float64(1)
 	}
+	eT = time.Now()
+	fmt.Println("Time for preparing dataIdentity:", eT.Sub(sT))
 
+	sT = time.Now()
 	for i := 0; i < 4; i++ {
 		ma := mat.NewDense(matSize, matSize, dataIdentity)
 		mc := mat.NewDense(matSize, matSize, make([]float64, matSize*matSize))
@@ -76,13 +88,18 @@ func mulMatrix(headerhash []byte, cache []uint32) []uint8 {
 			}
 		}
 	}
+	eT = time.Now()
+	fmt.Println("Time for ma & tmp calculation (mainly matrix dot product):", eT.Sub(sT))
 
+	sT = time.Now()
 	result := make([]uint8, 0)
 	for i := 0; i < matSize; i++ {
 		for j := 0; j < matSize; j++ {
 			result = append(result, uint8(tmp.At(i, j)))
 		}
 	}
+	eT = time.Now()
+	fmt.Println("Time for result generation:", eT.Sub(sT))
 
 	return result
 }
