@@ -26,7 +26,7 @@ import (
 
 const (
 	// BlockchainChannel is a channel for blocks and status updates
-	BlockchainChannel = byte(0x40)
+	BlockchainChannel = byte(0x41)
 
 	defaultChannelCapacity      = 100
 	trySyncIntervalMS           = 100
@@ -135,22 +135,20 @@ type page struct {
 }
 
 // NewProtocalReactor returns the reactor of whole blockchain.
-func NewProtocalReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, accessTokens *accesstoken.CredentialStore, miningEnable bool) *ProtocalReactor {
+func NewProtocalReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, sw *p2p.Switch, miningEnable bool) *ProtocalReactor {
 	pr := &ProtocalReactor{
-		chain:         chain,
-		wallet:        wallet,
-		accounts:      accounts,
-		assets:        assets,
-		blockKeeper:   newBlockKeeper(chain, sw),
-		txPool:        txPool,
-		mining:        cpuminer.NewCPUMiner(chain, accounts, txPool),
-		miningPool:    miningpool.NewMiningPool(chain, accounts, txPool),
-		mux:           http.NewServeMux(),
-		sw:            sw,
-		hsm:           hsm,
-		txFeedTracker: txfeeds,
-		accessTokens:  accessTokens,
-		miningEnable:  miningEnable,
+		chain: chain,
+		// wallet:        wallet,
+		// accounts:      accounts,
+		// assets:        assets,
+		blockKeeper: newBlockKeeper(chain, sw),
+		txPool:      txPool,
+		mining:      cpuminer.NewCPUMiner(chain, accounts, txPool),
+		miningPool:  miningpool.NewMiningPool(chain, accounts, txPool),
+		// mux:           http.NewServeMux(),
+		sw: sw,
+		// accessTokens:  accessTokens,
+		miningEnable: miningEnable,
 	}
 	pr.BaseReactor = *p2p.NewBaseReactor("ProtocalReactor", pr)
 	return pr

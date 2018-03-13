@@ -28,6 +28,7 @@ import (
 	cfg "github.com/bytom/config"
 	"github.com/bytom/env"
 	"github.com/bytom/errors"
+	"github.com/bytom/netsync"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/types"
@@ -208,7 +209,10 @@ func NewNode(config *cfg.Config) *Node {
 		go accounts.ExpireReservations(ctx, expireReservationsPeriod)
 	}
 
-	bcReactor := bc.NewBlockchainReactor(chain, txPool, accounts, assets, sw, hsm, wallet, txFeed, accessTokens, config.Mining)
+	protocolReactor := netsync.NewProtocalReactor(chain, txPool, accounts, sw, config.Mining)
+	sw.AddReactor("PROTOCOL", protocolReactor)
+
+	bcReactor := bc.NewBlockchainReactor(chain, accounts, assets, sw, hsm, wallet, txFeed, accessTokens)
 
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
 

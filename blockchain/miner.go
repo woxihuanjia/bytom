@@ -19,28 +19,28 @@ type GetWorkResp struct {
 	Seed        *bc.Hash            `json:"seed"`
 }
 
-func (bcr *BlockchainReactor) getWork() Response {
-	bh, err := bcr.miningPool.GetWork()
-	if err != nil {
-		return NewErrorResponse(err)
-	}
+// func (bcr *BlockchainReactor) getWork() Response {
+// 	bh, err := bcr.miningPool.GetWork()
+// 	if err != nil {
+// 		return NewErrorResponse(err)
+// 	}
 
-	seed, err := bcr.chain.GetSeed(bh.Height, &bh.PreviousBlockHash)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
+// 	seed, err := bcr.chain.GetSeed(bh.Height, &bh.PreviousBlockHash)
+// 	if err != nil {
+// 		return NewErrorResponse(err)
+// 	}
 
-	resp := &GetWorkResp{
-		BlockHeader: bh,
-		Seed:        seed,
-	}
-	return NewSuccessResponse(resp)
-}
+// 	resp := &GetWorkResp{
+// 		BlockHeader: bh,
+// 		Seed:        seed,
+// 	}
+// 	return NewSuccessResponse(resp)
+// }
 
-func (bcr *BlockchainReactor) submitWork(bh *legacy.BlockHeader) Response {
-	success := bcr.miningPool.SubmitWork(bh)
-	return NewSuccessResponse(success)
-}
+// func (bcr *BlockchainReactor) submitWork(bh *legacy.BlockHeader) Response {
+// 	success := bcr.miningPool.SubmitWork(bh)
+// 	return NewSuccessResponse(success)
+// }
 
 func (bcr *BlockchainReactor) getBlockHeaderByHeight(ctx context.Context, req struct {
 	Height uint64 `json:"block_height"`

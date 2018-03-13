@@ -20,11 +20,11 @@ func (bcr *BlockchainReactor) getNetInfo() Response {
 	}
 	net := &netInfo{}
 	net.Listening = bcr.sw.IsListening()
-	net.Syncing = bcr.blockKeeper.IsCaughtUp()
-	net.Mining = bcr.mining.IsMining()
+	// net.Syncing = bcr.blockKeeper.IsCaughtUp()
+	// net.Mining = bcr.mining.IsMining()
 	net.PeerCount = len(bcr.sw.Peers().List())
-	net.CurrentBlock = bcr.blockKeeper.chainHeight
-	net.HighestBlock = bcr.blockKeeper.maxPeerHeight
+	// net.CurrentBlock = bcr.blockKeeper.chainHeight
+	// net.HighestBlock = bcr.blockKeeper.maxPeerHeight
 
 	return NewSuccessResponse(net)
 }
@@ -170,11 +170,11 @@ func (bcr *BlockchainReactor) blockHeight() Response {
 	return NewSuccessResponse(blockHeight)
 }
 
-// return is in mining or not
-func (bcr *BlockchainReactor) isMining() Response {
-	IsMining := map[string]bool{"isMining": bcr.mining.IsMining()}
-	return NewSuccessResponse(IsMining)
-}
+// // return is in mining or not
+// func (bcr *BlockchainReactor) isMining() Response {
+// 	IsMining := map[string]bool{"isMining": bcr.mining.IsMining()}
+// 	return NewSuccessResponse(IsMining)
+// }
 
 // return gasRate
 func (bcr *BlockchainReactor) gasRate() Response {
