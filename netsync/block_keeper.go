@@ -1,4 +1,4 @@
-package blockchain
+package netsync
 
 import (
 	"errors"
@@ -12,6 +12,11 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
+
+type BlockRequestMessage struct {
+	Height  uint64
+	RawHash [32]byte
+}
 
 type blockKeeperPeer struct {
 	mtx    sync.RWMutex

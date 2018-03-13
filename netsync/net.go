@@ -1,4 +1,4 @@
-package blockchain
+package netsync
 
 import (
 	"bytes"
@@ -40,11 +40,6 @@ func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
 		err = errors.New("DecodeMessage() had bytes left over")
 	}
 	return
-}
-
-type BlockRequestMessage struct {
-	Height  uint64
-	RawHash [32]byte
 }
 
 func (m *BlockRequestMessage) GetHash() *bc.Hash {

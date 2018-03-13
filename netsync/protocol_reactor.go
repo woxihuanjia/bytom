@@ -1,7 +1,6 @@
-package blockchain
+package netsync
 
 import (
-	"context"
 	"net/http"
 	"reflect"
 	"time"
@@ -60,8 +59,8 @@ func NewErrorResponse(err error) Response {
 	return Response{Status: FAIL, Msg: err.Error()}
 }
 
-//BlockchainReactor handles long-term catchup syncing.
-type BlockchainReactor struct {
+//ProtocalReactor handles long-term catchup syncing.
+type ProtocalReactor struct {
 	p2p.BaseReactor
 
 	chain         *protocol.Chain
@@ -80,16 +79,6 @@ type BlockchainReactor struct {
 	handler       http.Handler
 	evsw          types.EventSwitch
 	miningEnable  bool
-}
-
-func (bcr *BlockchainReactor) info(ctx context.Context) (map[string]interface{}, error) {
-	return map[string]interface{}{
-		"is_configured": false,
-		"version":       "0.001",
-		"build_commit":  "----",
-		"build_date":    "------",
-		"build_config":  "---------",
-	}, nil
 }
 
 func maxBytes(h http.Handler) http.Handler {
@@ -145,9 +134,9 @@ type page struct {
 	After    string       `json:"after"`
 }
 
-// NewBlockchainReactor returns the reactor of whole blockchain.
-func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, accessTokens *accesstoken.CredentialStore, miningEnable bool) *BlockchainReactor {
-	bcr := &BlockchainReactor{
+// NewProtocalReactor returns the reactor of whole blockchain.
+func NewProtocalReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, accessTokens *accesstoken.CredentialStore, miningEnable bool) *ProtocalReactor {
+	pr := &ProtocalReactor{
 		chain:         chain,
 		wallet:        wallet,
 		accounts:      accounts,
@@ -163,33 +152,32 @@ func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accoun
 		accessTokens:  accessTokens,
 		miningEnable:  miningEnable,
 	}
-	bcr.BaseReactor = *p2p.NewBaseReactor("BlockchainReactor", bcr)
-	return bcr
+	pr.BaseReactor = *p2p.NewBaseReactor("ProtocalReactor", pr)
+	return pr
 }
 
 // OnStart implements BaseService
-func (bcr *BlockchainReactor) OnStart() error {
-	bcr.BaseReactor.OnStart()
-	bcr.BuildHandler()
+func (pr *ProtocalReactor) OnStart() error {
+	pr.BaseReactor.OnStart()
 
-	if bcr.miningEnable {
-		bcr.mining.Start()
+	if pr.miningEnable {
+		pr.mining.Start()
 	}
-	go bcr.syncRoutine()
+	go pr.syncRoutine()
 	return nil
 }
 
 // OnStop implements BaseService
-func (bcr *BlockchainReactor) OnStop() {
-	bcr.BaseReactor.OnStop()
-	if bcr.miningEnable {
-		bcr.mining.Stop()
+func (pr *ProtocalReactor) OnStop() {
+	pr.BaseReactor.OnStop()
+	if pr.miningEnable {
+		pr.mining.Stop()
 	}
-	bcr.blockKeeper.Stop()
+	pr.blockKeeper.Stop()
 }
 
 // GetChannels implements Reactor
-func (bcr *BlockchainReactor) GetChannels() []*p2p.ChannelDescriptor {
+func (pr *ProtocalReactor) GetChannels() []*p2p.ChannelDescriptor {
 	return []*p2p.ChannelDescriptor{
 		&p2p.ChannelDescriptor{
 			ID:                BlockchainChannel,
@@ -200,20 +188,20 @@ func (bcr *BlockchainReactor) GetChannels() []*p2p.ChannelDescriptor {
 }
 
 // AddPeer implements Reactor by sending our state to peer.
-func (bcr *BlockchainReactor) AddPeer(peer *p2p.Peer) {
+func (pr *ProtocalReactor) AddPeer(peer *p2p.Peer) {
 	peer.Send(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}})
 }
 
 // RemovePeer implements Reactor by removing peer from the pool.
-func (bcr *BlockchainReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
-	bcr.blockKeeper.RemovePeer(peer.Key)
+func (pr *ProtocalReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
+	pr.blockKeeper.RemovePeer(peer.Key)
 }
 
 // Receive implements Reactor by handling 4 types of messages (look below).
-func (bcr *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
+func (pr *ProtocalReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 	var tm *trust.TrustMetric
 	key := src.Connection().RemoteAddress.IP.String()
-	if tm = bcr.sw.TrustMetricStore.GetPeerTrustMetric(key); tm == nil {
+	if tm = pr.sw.TrustMetricStore.GetPeerTrustMetric(key); tm == nil {
 		log.Errorf("Can't get peer trust metric")
 		return
 	}
@@ -230,9 +218,9 @@ func (bcr *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 		var block *legacy.Block
 		var err error
 		if msg.Height != 0 {
-			block, err = bcr.chain.GetBlockByHeight(msg.Height)
+			block, err = pr.chain.GetBlockByHeight(msg.Height)
 		} else {
-			block, err = bcr.chain.GetBlockByHash(msg.GetHash())
+			block, err = pr.chain.GetBlockByHash(msg.GetHash())
 		}
 		if err != nil {
 			log.Errorf("Fail on BlockRequestMessage get block: %v", err)
@@ -246,19 +234,19 @@ func (bcr *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{response})
 
 	case *BlockResponseMessage:
-		bcr.blockKeeper.AddBlock(msg.GetBlock(), src)
+		pr.blockKeeper.AddBlock(msg.GetBlock(), src)
 
 	case *StatusRequestMessage:
-		block := bcr.chain.BestBlock()
+		block := pr.chain.BestBlock()
 		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(block)})
 
 	case *StatusResponseMessage:
-		bcr.blockKeeper.SetPeerHeight(src.Key, msg.Height, msg.GetHash())
+		pr.blockKeeper.SetPeerHeight(src.Key, msg.Height, msg.GetHash())
 
 	case *TransactionNotifyMessage:
 		tx := msg.GetTransaction()
-		if err := bcr.chain.ValidateTx(tx); err != nil {
-			bcr.sw.AddScamPeer(src)
+		if err := pr.chain.ValidateTx(tx); err != nil {
+			pr.sw.AddScamPeer(src)
 		}
 
 	default:
@@ -269,44 +257,44 @@ func (bcr *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 // Handle messages from the poolReactor telling the reactor what to do.
 // NOTE: Don't sleep in the FOR_LOOP or otherwise slow it down!
 // (Except for the SYNC_LOOP, which is the primary purpose and must be synchronous.)
-func (bcr *BlockchainReactor) syncRoutine() {
+func (pr *ProtocalReactor) syncRoutine() {
 	statusUpdateTicker := time.NewTicker(statusUpdateIntervalSeconds * time.Second)
-	newTxCh := bcr.txPool.GetNewTxCh()
+	newTxCh := pr.txPool.GetNewTxCh()
 
 	for {
 		select {
 		case newTx := <-newTxCh:
-			bcr.txFeedTracker.TxFilter(newTx)
-			go bcr.BroadcastTransaction(newTx)
+			pr.txFeedTracker.TxFilter(newTx)
+			go pr.BroadcastTransaction(newTx)
 		case _ = <-statusUpdateTicker.C:
-			go bcr.BroadcastStatusResponse()
+			go pr.BroadcastStatusResponse()
 
-			if bcr.miningEnable {
+			if pr.miningEnable {
 				// mining if and only if block sync is finished
-				if bcr.blockKeeper.IsCaughtUp() {
-					bcr.mining.Start()
+				if pr.blockKeeper.IsCaughtUp() {
+					pr.mining.Start()
 				} else {
-					bcr.mining.Stop()
+					pr.mining.Stop()
 				}
 			}
-		case <-bcr.Quit:
+		case <-pr.Quit:
 			return
 		}
 	}
 }
 
 // BroadcastStatusResponse broadcasts `BlockStore` height.
-func (bcr *BlockchainReactor) BroadcastStatusResponse() {
-	block := bcr.chain.BestBlock()
-	bcr.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(block)})
+func (pr *ProtocalReactor) BroadcastStatusResponse() {
+	block := pr.chain.BestBlock()
+	pr.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(block)})
 }
 
 // BroadcastTransaction broadcats `BlockStore` transaction.
-func (bcr *BlockchainReactor) BroadcastTransaction(tx *legacy.Tx) error {
+func (pr *ProtocalReactor) BroadcastTransaction(tx *legacy.Tx) error {
 	msg, err := NewTransactionNotifyMessage(tx)
 	if err != nil {
 		return err
 	}
-	bcr.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	pr.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{msg})
 	return nil
 }
