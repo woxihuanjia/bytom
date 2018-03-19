@@ -1,4 +1,4 @@
-package legacy
+package types
 
 import (
 	"github.com/bytom/consensus"
@@ -8,7 +8,7 @@ import (
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
-// MapTx converts a legacy TxData object into its entries-based
+// MapTx converts a types TxData object into its entries-based
 // representation.
 func MapTx(oldTx *TxData) *bc.Tx {
 	txid, header, entries := mapTx(oldTx)
@@ -146,7 +146,6 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			assetdefhash := hashData(oldIss.AssetDefinition)
 			iss := bc.NewIssuance(&anchorID, &val, uint64(i))
 			iss.WitnessAssetDefinition = &bc.AssetDefinition{
-				InitialBlockId: &oldIss.InitialBlock,
 				Data:           &assetdefhash,
 				IssuanceProgram: &bc.Program{
 					VmVersion: oldIss.VMVersion,
@@ -241,7 +240,7 @@ func mapBlockHeader(old *BlockHeader) (bhID bc.Hash, bh *bc.BlockHeader) {
 	return
 }
 
-// MapBlock converts a legacy block to bc block
+// MapBlock converts a types block to bc block
 func MapBlock(old *Block) *bc.Block {
 	if old == nil {
 		return nil // if old is nil, so should new be

@@ -1,4 +1,4 @@
-package legacy
+package types
 
 import (
 	"testing"
@@ -19,7 +19,7 @@ func TestTxHashes(t *testing.T) {
 		},
 		{
 			txdata: sampleTx(),
-			hash:   mustDecodeHash("33c121707a5c5567ed2c0a63da1fbc4077d51bc367b9630c664bfc241b51e641"), // todo: verify this value,
+			hash:   mustDecodeHash("718ef8d06b8a2b9e93d6c1555bfcda83aed492643b4e7dd85b816fa13ced46b9"), // todo: verify this value,
 		},
 	}
 
@@ -49,14 +49,13 @@ func BenchmarkHashNonemptyTx(b *testing.B) {
 }
 
 func sampleTx() *TxData {
-	initialBlockHash := mustDecodeHash("03deff1d4319d67baa10a6d26c1fea9c3e8d30e33474efee1a610a9bb49d758d")
-	assetID := bc.ComputeAssetID([]byte{1}, &initialBlockHash, 1, &bc.EmptyStringHash)
+	assetID := bc.ComputeAssetID([]byte{1}, 1, &bc.EmptyStringHash)
 	return &TxData{
 		Version:        1,
 		SerializedSize: 66,
 		Inputs: []*TxInput{
-			NewSpendInput(nil, mustDecodeHash("dd385f6fe25d91d8c1bd0fa58951ad56b0c5229dcc01f61d9f9e8b9eb92d3292"), assetID, 1000000000000, 1, []byte{1}, bc.Hash{}),
-			NewSpendInput(nil, bc.NewHash([32]byte{0x11}), assetID, 1, 1, []byte{2}, bc.Hash{}),
+			NewSpendInput(nil, mustDecodeHash("dd385f6fe25d91d8c1bd0fa58951ad56b0c5229dcc01f61d9f9e8b9eb92d3292"), assetID, 1000000000000, 1, []byte{1}),
+			NewSpendInput(nil, bc.NewHash([32]byte{0x11}), assetID, 1, 1, []byte{2}),
 		},
 		Outputs: []*TxOutput{
 			NewTxOutput(assetID, 600000000000, []byte{1}),
